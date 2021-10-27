@@ -1,5 +1,6 @@
 #include <iostream>
 #include <TRandom.h>
+#include <TClass.h>
 
 #include <ROOT/RNTuple.hxx>
 #include <ROOT/RNTupleModel.hxx>
@@ -55,14 +56,39 @@ int main() {
     {
 
       auto model = RNTupleModel::Create();
-      auto fldVpx = model->MakeField<std::vector<float>>("vpx");
-      auto part = model->MakeField<std::vector<edm4hep::MCParticleData>>("part");
+      //auto fldVpx = model->MakeField<std::vector<float>>("vpx");
+      //auto part = model->MakeField<std::vector<edm4hep::MCParticleData>>("part");
+      
+
+       auto field = RFieldBase::Create("part",  "vector<edm4hep::MCParticleData>").Unwrap();
+       
+
+       auto rv = TClass::GetClass("vector<edm4hep::MCParticleData>");
+       auto rvc = TClass::GetClass("edm4hep::MCParticleCollection");
+
+       auto vec = static_cast<podio::CollectionBase*>(rvc->New()); // new edm4hep::MCParticleCollection();
+       auto buffers = vec->getBuffers();
+       //auto rvc = rv->New();
+             auto collection = 
+                     static_cast<podio::CollectionBase*>(rvc->New());
+       auto collBuffers = collection->getBuffers();
+       collBuffers.data = rv->New();
+
+       //std::vector<edm4hep::MCParticleData> **v = new std::vector<edm4hep::MCParticleData> *();
+       //*v = buffers.dataAsVector<edm4hep::MCParticleData>();
+       void* vv =  (void*) *static_cast<std::vector<float>**>(buffers.data);
+       model->GetDefaultEntry()->CaptureValue(field->CaptureValue(vv));
+       model->GetFieldZero()->Attach(std::move(field));
+
+
+
+
       auto ntuple = RNTupleReader::Open(std::move(model), "F", "tmp.root");
       ntuple->Show(41);
       for (auto entryId : *ntuple) {
         ntuple->LoadEntry(entryId);
         //std::cout << part->at(0).vertex.x << std::endl;
-        std::cout << part->size() << std::endl;
+        //std::cout << (*v)->size() << std::endl;
 
 
       }
